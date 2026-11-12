@@ -1,5 +1,5 @@
 /-
-御成敗式目 全51条の原文照合モデル
+御成敗式目 51条の登録規則と限定した衝突候補の検査
 実行: lean ShikimokuOriginalAudit.lean
 
 底本は『群書類従』第十五輯所収本の翻刻。
@@ -11,6 +11,9 @@ https://dl.ndl.go.jp/pid/1879792/1/6
 条件付きの義務・禁止・許可のほか、既存の慣行の記述を区別する。
 同じ行為名は同じ事案・主体・対象・手続段階についての比較を表す。
 各比較に固有の同一性や背景事実は成立条件として明示する。
+条件・行為は文字列の原子として扱う。意味上の含意や行為の言い換えは
+推論しない。51条すべてに項目があることは、全内容の形式化を意味しない。
+第41条と第43条の比較用効果は原規則から生成し、解釈の変更後にも再生成する。
 -/
 
 namespace ShikimokuOriginal
@@ -94,12 +97,12 @@ def articles : List Article := [
     ⟨.require, "夫の咎により妻の所領を没収の対象とする", ["夫が第11条の重科", "対象が妻の所領"], ["当座の口論による刃傷・殺害"]⟩,
     ⟨.forbid, "夫の咎により妻の所領を没収の対象とする", ["対象が妻の所領", "当座の口論による刃傷・殺害"], []⟩
   ]⟩,
-  ⟨12, 146, "悪口による論所の相手への付与と、無理な訴えによる別所領の没収を区別。", [
+  ⟨12, 146, "問注中の悪口を共通条件とする。後文を前文の分岐と読み、理ありなら論所、理なしなら他所領の有無で処分。原告・被告を問わない。", [
     ⟨.require, "重大な悪口の発言者を流罪", ["重大な悪口"], []⟩,
     ⟨.require, "軽い悪口の発言者を拘禁", ["軽い悪口"], []⟩,
-    ⟨.require, "悪口を吐いた当事者の相手に論所を付す", ["問注中の悪口"], []⟩,
-    ⟨.require, "無理な訴えをした者の他の所領を没収", ["論所の主張に理がない", "訴えた者に他の所領あり"], []⟩,
-    ⟨.require, "無理な訴えをした者を流罪", ["論所の主張に理がない"], ["訴えた者に所領あり"]⟩
+    ⟨.require, "悪口を吐いた当事者の相手に論所を付す", ["当該当事者が問注中に悪口", "当該当事者の論所の主張に理あり"], []⟩,
+    ⟨.require, "悪口を吐いた当事者の他の所領を没収", ["当該当事者が問注中に悪口", "当該当事者の論所の主張に理なし", "当該当事者に他の所領あり"], []⟩,
+    ⟨.require, "悪口を吐いた当事者を流罪", ["当該当事者が問注中に悪口", "当該当事者の論所の主張に理なし"], ["当該当事者に他の所領あり"]⟩
   ]⟩,
   ⟨13, 150, "処分の身分区分は侍と郎従以下。", [
     ⟨.require, "殴打した侍の所領を没収", ["殴打した者が侍", "殴打した者に所領あり"], []⟩,
@@ -121,10 +124,9 @@ def articles : List Article := [
     ⟨.require, "根拠なく謀書と称した者に寺社修理を命じる", ["相手の証文を謀書と称したが誤りなし"], ["告発者に修理の資力なし"]⟩,
     ⟨.require, "修理の資力がない虚偽の謀書告発者を追放", ["相手の証文を謀書と称したが誤りなし", "告発者に修理の資力なし"], []⟩
   ]⟩,
-  ⟨16, 160, "現給人の勲功への代替給付と旧主への返還を区別。発覚時期、身分、当時の知行を入力。", [
+  ⟨16, 160, "現給人への代替給付と旧主への返還を区別。即時の処刑・没収は既往の処分の説明（畢）としてこの注記に記録し、現在の義務から除外。後日判明者への処分を規則化。", [
     ⟨.require, "承久の乱で誤って没収した所領を旧主へ返す", ["承久の乱の没収", "旧主の無過が証拠上明白"], []⟩,
     ⟨.require, "現給人に代替の恩賞を与える", ["誤没収地を旧主へ返還", "現給人に勲功奉公あり"], []⟩,
-    ⟨.require, "朝廷方に加わった御恩の輩を処刑し所帯を没収", ["承久の乱で御恩の輩が朝廷方"], ["処刑・没収を免れて後に判明"]⟩,
     ⟨.require, "後に判明した朝廷方の御恩の輩の所領を五分の一没収", ["承久の乱で御恩の輩が朝廷方", "処刑・没収を免れて後に判明"], []⟩,
     ⟨.forbid, "朝廷方の下司・荘官を改めて処分", ["御家人以外の下司・荘官の朝廷方参加が後に判明"], []⟩,
     ⟨.forbid, "承久没収地につき当時の知行者を除外する旧領請求を受理", ["当時の知行者の罪で没収", "それ以前の由緒に基づく濫望"], []⟩
@@ -140,7 +142,8 @@ def articles : List Article := [
   ⟨19, 169, "親疎を問わず眷養された者と本主の子孫の相論。対象は得譲の所領。", [
     ⟨.require, "得譲の所領を本主の子孫に付す", ["眷養された者が本主から所領を譲り受けた", "眷養された者が本主の子孫に背いた"], []⟩
   ]⟩,
-  ⟨20, 172, "譲り状を得た子が父母より先に死去。父祖の意に任せる。", [
+  ⟨20, 172, "子の存命中にも悔返し得るとの前提と、父母より先に死去した後の父祖の処分を登録。", [
+    ⟨.permit, "父祖が譲り状に係る所領の処分を改める", ["譲り状を得た子が存命"], []⟩,
     ⟨.permit, "父祖が譲り状に係る所領の処分を改める", ["譲り状を得た子が父母より先に死去"], []⟩
   ]⟩,
   ⟨21, 176, "重科による棄捐と、有功無過の妻を新しい妻のために棄てた場合。", [
@@ -206,23 +209,23 @@ def articles : List Article := [
   ⟨34, 219, "強姦と和姦の両方を明示。前段の出仕停止、後段の身分別処分を分離。", [
     ⟨.require, "他人妻を犯した者の所領を半分召し上げ出仕を止める", ["他人妻への強姦または和姦", "行為者に所領あり"], []⟩,
     ⟨.require, "他人妻を犯した者を遠流", ["他人妻への強姦または和姦"], ["行為者に所領あり"]⟩,
-    ⟨.require, "第34条の女性の所領も召し上げる", ["第34条前段の女性", "女性に所領あり"], []⟩,
+    ⟨.require, "第34条の女性の所領も半分召し上げる", ["第34条前段の女性", "女性に所領あり"], []⟩,
     ⟨.require, "第34条の女性を配流", ["第34条前段の女性"], ["女性に所領あり"]⟩,
     ⟨.require, "道路で女性を捕らえた御家人の出仕を百日止める", ["道路で女性を捕らえた御家人"], []⟩,
     ⟨.require, "道路で女性を捕らえた郎従以下の片鬢を剃る", ["道路で女性を捕らえた郎従以下"], []⟩,
     ⟨.require, "道路で女性を捕らえた法師の罪科を斟酌する", ["道路で女性を捕らえた法師"], []⟩
   ]⟩,
-  ⟨35, 223, "三度の召文と不参決。原告に理があれば直接裁許、無理の場合は他に給付。", [
+  ⟨35, 223, "三度の召文と不参決。原告の理の有無で分岐。末尾の所従・馬牛・雑物等の但書を無理な原告の枝に接続する読みを採用し、但書の射程の確定とはしない。", [
     ⟨.require, "不参決の事件で原告に直ちに裁許", ["訴状による召文を三度出した", "被告が不参決", "原告に理あり"], []⟩,
     ⟨.require, "不参決の事件で係争地を他に給付", ["訴状による召文を三度出した", "被告が不参決", "原告に理なし", "対象が給付の対象"], []⟩,
-    ⟨.require, "所従・馬牛・雑物等を数に従って糺し返し寺社修理に付す", ["第35条の不参決と無理な訴え", "対象が所従・馬牛・雑物等"], []⟩
+    ⟨.require, "所従・馬牛・雑物等を数に従って糺し返し寺社修理に付す", ["訴状による召文を三度出した", "被告が不参決", "原告に理なし", "対象が所従・馬牛・雑物等"], []⟩
   ]⟩,
   ⟨36, 226, "実検後、非拠の訴人の所領から越境主張の分限を割く。", [
     ⟨.require, "実検使を遣わし従来の境界を調べる", ["境界を変える相論"], []⟩,
     ⟨.require, "訴人の所領から越境主張分を割き相手方へ付す", ["境界を変える相論", "実検で非拠の訴訟と判明"], []⟩
   ]⟩,
-  ⟨37, 230, "見出しに即し、御家人が京都に所領の上司等への補任を望む場合を扱う。", [
-    ⟨.forbid, "御家人が京都に傍官・所領上司への補任を濫望", ["関東御家人の第37条の請願"], []⟩,
+  ⟨37, 230, "傍官所領上司を傍官と所領上司に分割せず、傍官（他の御家人）の所領の上司への補任請求として扱う。", [
+    ⟨.forbid, "御家人が京都に傍官の所領の上司への補任を濫望", ["関東御家人の第37条の請願"], []⟩,
     ⟨.require, "濫望した御家人の所領一所を召し上げる", ["御家人による第37条の濫望"], []⟩
   ]⟩,
   ⟨38, 233, "惣地頭による名主職の妨害、別納の御下文、名主の先例違反を区別。", [
@@ -241,12 +244,10 @@ def articles : List Article := [
     ⟨.require, "無免許昇進した御帰依の僧を停止", ["御帰依の僧の無免許昇進"], []⟩,
     ⟨.require, "そのほかの禅侶に帰依者が諷諫", ["そのほかの禅侶の無免許昇進"], []⟩
   ]⟩,
-  ⟨41, 243, "十年の無沙汰は十年使役されなかったことと区別。前段の年紀と後段の子の帰属を比較。", [
-    ⟨.forbid, "当該の子の現帰属を裁定で変更", ["対象の帰属をめぐる訴訟・沙汰なしに十年を経過", "対象は第41条の年紀に服する子"], []⟩,
+  ⟨41, 243, "十年の無沙汰は十年使役されなかったことと区別。年紀と男女の帰属という3原規則を登録し、帰属変更の比較用効果を後で導出。", [
     ⟨.forbid, "十年を経た奴婢・雑人の帰属を改めて沙汰", ["奴婢・雑人の帰属について無沙汰で十年を経過"], []⟩,
     ⟨.require, "奴婢の子の男子を父方に付す", ["奴婢の子が男子"], []⟩,
-    ⟨.require, "奴婢の子の女子を母方に付す", ["奴婢の子が女子"], []⟩,
-    ⟨.require, "当該の子の現帰属を裁定で変更", ["対象は第41条の年紀に服する子", "父母への振分けで定まる帰属先が現帰属先と異なる"], []⟩
+    ⟨.require, "奴婢の子の女子を母方に付す", ["奴婢の子が女子"], []⟩
   ]⟩,
   ⟨42, 246, "逃毀を称した拘束・奪取を抑え、年貢未済の弁償と損物の返還を分ける。", [
     ⟨.forbid, "領主が逃毀を称して住民の妻子を拘束し資財を奪う", ["住民が逃脱"], []⟩,
@@ -254,16 +255,16 @@ def articles : List Article := [
     ⟨.require, "領主が奪った財物を速やかに返す", ["第42条の召決", "領主が財物を奪った"], ["年貢未済あり"]⟩,
     ⟨.permit, "住民が去留を決める", ["第42条の住民"], []⟩
   ]⟩,
-  ⟨43, 250, "虚偽の押領物の糺返と加害者の所領没収を分離。両者が同一所領かは自動で仮定しない。", [
+  ⟨43, 250, "押領物の糺返と加害者の所領没収を分離。土地自体の糺返となる場合の知行者変更は元規則から導出し、対象の同一性は入力条件とする。", [
     ⟨.require, "虚偽の押領で奪った物を速やかに糺し返す", ["虚偽による押領・収益取得が認定された"], []⟩,
     ⟨.require, "押領者の所領を没収", ["虚偽による押領・収益取得が認定された", "押領者に所領あり"], []⟩,
     ⟨.require, "所領のない押領者を遠流", ["虚偽による押領・収益取得が認定された"], ["押領者に所領あり"]⟩,
-    ⟨.require, "幕府が当該所領の現知行者を交替させる", ["虚偽による押領・収益取得が認定された", "糺返が当該所領自体に及び現知行者が押領者である"], []⟩,
     ⟨.forbid, "当知行地につき特段の事情なく安堵御下文を申請", ["当知行地について指すべき事情なし"], []⟩
   ]⟩,
-  ⟨44, 253, "罪科未定の傍輩の所領を狙う言上と、闕所後の望みを区別。異文に留意。", [
+  ⟨44, 253, "兼日の競望の不採用と本来の訴訟を区別。底本の闕所後は非制限という但書を新規の望みの許可として登録。翻刻には但以下十字を欠く異本の注記があり、その異本ではこの許可は導かない。", [
     ⟨.forbid, "傍輩の所領を得るため罪科未定のうちに陥れる", ["傍輩の罪科は未断", "傍輩の所領を望む"], []⟩,
-    ⟨.forbid, "幕府が罪科未定時の競望を採用", ["傍輩の所領を罪科未定の時から競望"], []⟩
+    ⟨.forbid, "幕府が罪科未定時の競望を採用", ["傍輩の所領を罪科未定の時から競望"], []⟩,
+    ⟨.permit, "闕所後に新たな所領請求を申し立てる", ["所領が闕所となった", "当該請求は闕所後に新たに起こした望み"], []⟩
   ]⟩,
   ⟨45, 256, "罪科披露と糺決を区別。所職の改替前に調査と判断を要する。", [
     ⟨.forbid, "罪科を理由に所職を改替", ["罪科が披露された"], ["糺決を経た"]⟩,
@@ -303,11 +304,42 @@ def articles : List Article := [
 
 structure NumberedClause where
   article : Nat
+  sourceClause : Nat
+  sourceAct : String
+  derived : Bool := false
   clause : Clause
 
 def allClauses (source : List Article) : List NumberedClause :=
   source.flatMap fun article =>
-    article.clauses.map fun clause => ⟨article.number, clause⟩
+    article.clauses.mapIdx fun index clause =>
+      { article := article.number, sourceClause := index + 1,
+        sourceAct := clause.act, clause := clause }
+
+-- 第41条・第43条の原規則を変更してからこの関数を通す。
+-- 派生効果は元の条件・例外を必ず引き継ぐ。子・所領・現在の帰属先等の
+-- 同一性は入力の仮定であり、この関数が歴史上の事実を認定するわけではない。
+def comparisonRules (source : List NumberedClause) : List NumberedClause :=
+  source.flatMap fun entry =>
+    let clause := entry.clause
+    let extra :=
+      if entry.article == 41 &&
+          clause.act == "十年を経た奴婢・雑人の帰属を改めて沙汰" then
+        ["対象は第41条の年紀に服する子"]
+      else if entry.article == 41 &&
+          (["奴婢の子の男子を父方に付す", "奴婢の子の女子を母方に付す"].contains clause.act) then
+        ["対象は第41条の年紀に服する子",
+         "父母への振分けで定まる帰属先が現帰属先と異なる"]
+      else if entry.article == 43 &&
+          clause.act == "虚偽の押領で奪った物を速やかに糺し返す" then
+        ["糺返が当該所領自体に及び現知行者が押領者である"]
+      else []
+    let effect := if entry.article == 43 then
+      "幕府が当該所領の現知行者を交替させる"
+      else "当該の子の現帰属を裁定で変更"
+    if extra.isEmpty then [entry]
+    else [entry, { entry with derived := true, clause := { clause with
+      act := effect,
+      conditions := clause.conditions ++ extra } }]
 
 def opposite (left right : Mode) : Bool :=
   match left, right with
@@ -326,11 +358,14 @@ structure Candidate where
   present : List String
   absent : List String
 
--- 各規則の条件は連言なので、両方の必須条件の和集合を試せばよい。
--- その和集合に例外が入っていれば、条件を追加しても同時適用はできない。
+def comparable (left right : NumberedClause) : Bool :=
+  left.clause.act == right.clause.act &&
+    opposite left.clause.mode right.clause.mode
+
+-- 各文字列を独立な命題とみなす限定した判定。自然言語の同義・含意や
+-- 事実間の排他関係は判定しない。条件の連言の和集合で同時適用を試す。
 def compareClauses (left right : NumberedClause) : Option Candidate :=
-  if left.clause.act == right.clause.act &&
-      opposite left.clause.mode right.clause.mode then
+  if comparable left right then
     let present := (left.clause.conditions ++ right.clause.conditions).eraseDups
     if applies left.clause present && applies right.clause present then
       some ⟨left, right, present,
@@ -343,26 +378,40 @@ def findConflicts : List NumberedClause → List Candidate
   | first :: rest =>
     rest.filterMap (compareClauses first) ++ findConflicts rest
 
-def baseline : List NumberedClause := allClauses articles
+def sameActPairCount : List NumberedClause → Nat
+  | [] => 0
+  | first :: rest =>
+    (rest.filter (fun entry => first.clause.act == entry.clause.act)).length +
+      sameActPairCount rest
+
+def comparablePairCount : List NumberedClause → Nat
+  | [] => 0
+  | first :: rest =>
+    (rest.filter (comparable first)).length + comparablePairCount rest
+
+def sourceRules : List NumberedClause := allClauses articles
+
+def baseline : List NumberedClause := comparisonRules sourceRules
 
 structure Reading where
   article : Nat
-  act : String
+  acts : List String
   mode : Mode
   exception : String
   explanation : String
 
 -- 原文にない優先関係を初期モデルに埋め込まず、別々に試す。
+-- 第41条は比較用効果でなく男女それぞれの原規則を変更する。
 def readings : List Reading := [
-  ⟨8, "幕府が当該所領の現知行者を交替させる", .forbid,
+  ⟨8, ["幕府が当該所領の現知行者を交替させる"], .forbid,
     "虚偽による押領・収益取得が認定された",
     "この第43条型の虚偽押領では、第8条の年紀の保護を外す"⟩,
-  ⟨10, "父に連座の罪科を科す", .forbid, "子が父祖の敵を殺害",
+  ⟨10, ["父に連座の罪科を科す"], .forbid, "子が父祖の敵を殺害",
     "父祖の敵の殺害を、職・財宝目的の場合の父の免責から外す"⟩,
-  ⟨41, "当該の子の現帰属を裁定で変更", .require,
-    "対象の帰属をめぐる訴訟・沙汰なしに十年を経過",
-    "十年の年紀が成立した場合は、父母への振分けによる帰属変更をしない"⟩,
-  ⟨48, "御家人が対象所領を売却", .custom,
+  ⟨41, ["奴婢の子の男子を父方に付す", "奴婢の子の女子を母方に付す"], .require,
+    "奴婢・雑人の帰属について無沙汰で十年を経過",
+    "十年の年紀が成立した場合は、男女の振分けの原規則とそこからの帰属変更効果を適用しない"⟩,
+  ⟨48, ["御家人が対象所領を売却"], .custom,
     "対象所領が別御恩の売買禁止の射程に入る",
     "禁制の射程に入る所領については私領売却の慣行を援用しない"⟩
 ]
@@ -371,7 +420,7 @@ def withReading (rules : List NumberedClause) (reading : Reading) :
     List NumberedClause :=
   rules.map fun entry =>
     let clause := entry.clause
-    if entry.article == reading.article && clause.act == reading.act &&
+    if entry.article == reading.article && reading.acts.contains clause.act &&
         decide (clause.mode = reading.mode) then
       { entry with clause := { clause with
           exceptions := reading.exception :: clause.exceptions } }
@@ -380,18 +429,88 @@ def withReading (rules : List NumberedClause) (reading : Reading) :
 def candidatePairs (rules : List NumberedClause) : List (Nat × Nat) :=
   (findConflicts rules).map fun candidate => (candidate.left.article, candidate.right.article)
 
+-- 条文番号対の重複除去は表示用。異なる性別分岐などを同一の実行ケースとはしない。
+def candidateArticlePairs (rules : List NumberedClause) : List (Nat × Nat) :=
+  (candidatePairs rules).eraseDups
+
+def effectsAt (rules : List NumberedClause) (article : Nat) (mode : Mode)
+    (facts : List String) : List String :=
+  (rules.filter fun entry => entry.article == article &&
+    decide (entry.clause.mode = mode) && applies entry.clause facts).map (·.clause.act)
+
 #guard articles.map Article.number == (List.range 51).map (· + 1)
 #guard articles.all (fun article => !article.clauses.isEmpty)
 #guard baseline.all (fun entry => applies entry.clause entry.clause.conditions)
-#guard candidatePairs baseline == [(8, 43), (10, 10), (41, 41), (48, 48)]
-#guard readings.all (fun reading => (findConflicts (withReading baseline reading)).length == 3)
-#guard (findConflicts (readings.foldl withReading baseline)).isEmpty
+#guard candidatePairs baseline == [(8, 43), (10, 10), (41, 41), (41, 41), (48, 48)]
+#guard candidateArticlePairs baseline == [(8, 43), (10, 10), (41, 41), (48, 48)]
+#guard readings.all (fun reading =>
+  (candidateArticlePairs (comparisonRules (withReading sourceRules reading))).length == 3)
+#guard (findConflicts (comparisonRules (readings.foldl withReading sourceRules))).isEmpty
+
+-- 第12条: 悪口なしの敗訴は処罰しない。役割は原告・被告を問わない。
+#guard (effectsAt sourceRules 12 .require
+  ["当該当事者の論所の主張に理なし", "当該当事者に他の所領あり"]).isEmpty
+#guard (effectsAt sourceRules 12 .require
+  ["当該当事者の論所の主張に理なし"]).isEmpty
+#guard ["原告", "被告"].all (fun role =>
+  effectsAt sourceRules 12 .require
+    [role, "当該当事者が問注中に悪口", "当該当事者の論所の主張に理あり"] ==
+      ["悪口を吐いた当事者の相手に論所を付す"] &&
+  effectsAt sourceRules 12 .require
+    [role, "当該当事者が問注中に悪口", "当該当事者の論所の主張に理なし",
+      "当該当事者に他の所領あり"] == ["悪口を吐いた当事者の他の所領を没収"] &&
+  effectsAt sourceRules 12 .require
+    [role, "当該当事者が問注中に悪口", "当該当事者の論所の主張に理なし"] ==
+      ["悪口を吐いた当事者を流罪"])
+
+-- 第41条: 年紀成立時は元の男女分岐と比較用効果の両方が止まる。
+-- 年紀が成立しない時も確認する。派生効果の二つの追加条件は、
+-- もう一方を満たしたまま一つずつ外し、それぞれが必要なことを検査する。
+def reading41 : Reading := readings[2]
+def interpreted41 : List NumberedClause := withReading sourceRules reading41
+#guard ["奴婢の子が男子", "奴婢の子が女子"].all (fun sex =>
+  let facts := [sex, "対象は第41条の年紀に服する子",
+    "父母への振分けで定まる帰属先が現帰属先と異なる"]
+  let expired := "奴婢・雑人の帰属について無沙汰で十年を経過" :: facts
+  (effectsAt interpreted41 41 .require expired).isEmpty &&
+  (effectsAt (comparisonRules interpreted41) 41 .require expired).isEmpty &&
+  (effectsAt interpreted41 41 .require facts).length == 1 &&
+  (effectsAt (comparisonRules interpreted41) 41 .require facts).length == 2 &&
+  !(effectsAt (comparisonRules interpreted41) 41 .require
+    [sex, "対象は第41条の年紀に服する子"]).contains
+      "当該の子の現帰属を裁定で変更" &&
+  !(effectsAt (comparisonRules interpreted41) 41 .require
+    [sex, "父母への振分けで定まる帰属先が現帰属先と異なる"]).contains
+      "当該の子の現帰属を裁定で変更")
+
+-- 第43条: 物・収益の返還だけから知行者変更を推論しない。
+#guard !(effectsAt baseline 43 .require
+  ["虚偽による押領・収益取得が認定された"]).contains
+    "幕府が当該所領の現知行者を交替させる"
+#guard (effectsAt baseline 43 .require
+  ["虚偽による押領・収益取得が認定された",
+    "糺返が当該所領自体に及び現知行者が押領者である"]).contains
+      "幕府が当該所領の現知行者を交替させる"
+
+-- 第44条: 闕所後の新規請求の許可は、兼日の競望の自動復活ではない。
+#guard (effectsAt sourceRules 44 .permit
+  ["所領が闕所となった", "傍輩の所領を罪科未定の時から競望"]).isEmpty
+#guard effectsAt sourceRules 44 .forbid
+  ["所領が闕所となった", "傍輩の所領を罪科未定の時から競望"] ==
+    ["幕府が罪科未定時の競望を採用"]
+#guard effectsAt sourceRules 44 .permit
+  ["所領が闕所となった", "当該請求は闕所後に新たに起こした望み"] ==
+    ["闕所後に新たな所領請求を申し立てる"]
 
 def modeName : Mode → String
   | .require => "義務"
   | .forbid => "禁止"
   | .permit => "明示的許可"
   | .custom => "慣行"
+
+def originName (entry : NumberedClause) : String :=
+  s!"第{entry.article}条の原規則{entry.sourceClause}" ++
+    (if entry.derived then s!"から導出（{entry.sourceAct}）" else "")
 
 def displayCandidate (candidate : Candidate) : String :=
   let left := candidate.left
@@ -402,24 +521,31 @@ def displayCandidate (candidate : Candidate) : String :=
     else String.intercalate "、" candidate.absent
   s!"第{left.article}条（{modeName left.clause.mode}） / " ++
   s!"第{right.article}条（{modeName right.clause.mode}） — {left.clause.act}\n" ++
+  s!"  出所: {originName left} / {originName right}\n" ++
   s!"  成立条件: {present}\n  除外条件: {absent}"
 
 def report : IO Unit := do
   let count := baseline.length
   let candidates := findConflicts baseline
-  IO.println s!"対象: {articles.length}条、{count}規則、{count * (count - 1) / 2}規則対"
+  IO.println s!"登録: {articles.length}条、{sourceRules.length}原規則（全条文内容の完全な形式化ではない）"
+  IO.println s!"比較入力: {count}規則（うち原規則から導出した比較用効果{(baseline.filter (·.derived)).length}）"
+  IO.println s!"異なる2規則の全組合せ: {count * (count - 1) / 2}組"
+  IO.println s!"同一の行為名となる組: {sameActPairCount baseline}組"
+  IO.println s!"同一の行為名かつ反対モードとして条件を比較する組: {comparablePairCount baseline}組"
   let customs := candidates.filter fun candidate =>
     decide (candidate.left.clause.mode = .custom ∨ candidate.right.clause.mode = .custom)
-  IO.println s!"原文照合モデル: {candidates.length}件の候補（うち慣行と禁制の緊張{customs.length}件）"
+  IO.println s!"検出: {candidates.length}比較枝、条文番号対で{(candidateArticlePairs baseline).length}組（うち慣行と禁制の緊張{customs.length}枝）"
   for candidate in candidates do
     IO.println (displayCandidate candidate)
   IO.println "\n個別の解釈を適用した場合"
   for reading in readings do
-    IO.println s!"  第{reading.article}条: {reading.explanation} → 残る候補 {(findConflicts (withReading baseline reading)).length}件"
-  IO.println s!"四つを併用 → 残る候補 {(findConflicts (readings.foldl withReading baseline)).length}件"
+    let interpreted := comparisonRules (withReading sourceRules reading)
+    IO.println s!"  第{reading.article}条: {reading.explanation} → 残る候補 {(findConflicts interpreted).length}枝、条文番号対で{(candidateArticlePairs interpreted).length}組"
+  IO.println s!"四つを併用 → 残る候補 {(findConflicts (comparisonRules (readings.foldl withReading sourceRules))).length}枝"
+  IO.println "同義の行為名・複合行為・事実間の含意は自動で統合しない。候補ゼロはこの比較範囲と採用した解釈に限る。"
   IO.println "\n全51条の照合メモ"
   for article in articles do
-    IO.println s!"  第{article.number}条（翻刻L{article.sourceLine}以下、{article.clauses.length}規則） {article.note}"
+    IO.println s!"  第{article.number}条（翻刻L{article.sourceLine}以下、{article.clauses.length}原規則） {article.note}"
 
 #eval report
 
