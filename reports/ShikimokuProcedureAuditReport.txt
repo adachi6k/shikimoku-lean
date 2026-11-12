@@ -1,92 +1,134 @@
-御成敗式目　手続の順序による衝突の検証
+御成敗式目　手続の順序による衝突候補の検証
 
-原文翻刻を参照し、第6・7・44条の受付段階の制限、第51条の問状、
-第35条の召文・不参決、第49条の証文による直接裁定、第29条の
-裁許の留保、第45条の所職改替を有限状態モデルで表した。
+原文翻刻を参照し、第6・7条の受付、第44条の競望の不採用、
+第51条の問状、第35条の召文・不参決、第49条の証文による裁定、
+第29条の裁許の留保、第45条の所職改替を有限状態モデルで表した。
 Lean 4.19.0で確認。実行コマンドは lean ShikimokuProcedureAudit.lean。
+
+原文との対応の修正
+
+第44条の競望は、罪科の本案と別の申出として入力する。
+競望を不採用にしても、本案の訴訟が自動的に停止することはない。
+受付の直前に競望を審査する位置は、原文に明記された順序ではなく、
+本モデルの仮定。拒否した競望を後から自動的に復活させる規則はない。
+
+第49条では、原告の主張に理があるかどうかと、双方の証文により
+理非が明白かどうかを分離した。原告の無理が証文から明白な場合も、
+対決を経ず原告請求を認めない裁定へ進める。これは被告自身の
+積極的な権原まで必ず認定する意味ではない。第35条の不参決で
+原告に理がなく他人へ給付する処分とも、別のイベントとして扱う。
+
+第29条は、奉行人を迂回した事実、裁判側への判明、留保の発動を
+別にした。判明後・未発動の裁定と、留保中の裁定を別々に検出する。
+この認識時点の区別はモデル上の仮定で、原文に判明イベントの
+定めがあるわけではない。原文は留保の解除条件や時間も定めない。
+解除は外部判断とし、二十日経過による自動解除は採用していない。
+
+第45条の糺決は所職改替の必要条件として扱い、具体的な改易根拠は
+別の規則からの入力とする。糺決だけ、または改易根拠だけでは
+改替できない。本案の裁定後に改替を置く順序はモデルの仮定である。
 
 結果
 
-第29条の留保を発動してから、第35条または第49条の直接裁定を
-行う経路があった。留保と直接裁定を独立に適用すると、272事案中
-16事案にこの経路がある。第35条の原告への裁許が8事案、原告に
-理がなく他へ給付する場合が4事案、第49条の証文による裁定が
-8事案。両方の条文で裁定できる事案が4件あり、合計は16事案。
+1,024通りの事案に対し、三つの解釈を同じ広義の留保基準で照合した。
+この共通基準は、迂回が判明してから留保解除まで裁定を見合わせる
+というもの。検出件数は基準との相違を表し、各解釈自体の論理矛盾や、
+御成敗式目そのものの矛盾が証明されたという意味ではない。
 
-問状を経る事案の一例
-  訴状を受け付ける
-  → 第51条に従って問状を出す
-  → 第35条の召文を三度出し、不参決を確認する
-  → 原告に理があると確認する
-  → 奉行人を迂回したことが分かり、第29条の裁許留保を発動する
-  → 留保中に第35条の裁許を出そうとする
+・第35・49条の直接裁定を第29条の制限と独立に適用：96事案。
+  出頭後の通常裁定は共通基準に従って見合わせる設定とした。
+  判明後・未発動の裁定が96事案、発動中の裁定も96事案。
+  第35条の原告への裁許、他人への給付、第49条の原告請求認容、
+  原告請求を認めない裁定は、それぞれ32事案。複数の経路を持つ
+  同じ事案があるため、経路別・段階別の件数は単純に加算できない。
 
-同じ事案で双方の証文から理非が明らかなら、第49条の経路も
-選べる。第49条の経路は三度の召文を前提としない。
+・第29条を原告への裁許に限る解釈：64事案。
+  第35条の他人への給付、第49条の原告請求を認めない裁定、
+  出頭後の原告請求を認めない裁定が、それぞれ32事案。
+  この解釈では原告への給付を止める一方、これらの処分は認めるため、
+  広義の共通基準との差として検出される。
 
-留保の射程を変えた結果
+・判明後は直接裁定を含む全裁定を留保解除まで見合わせる解釈：0事案。
+  留保を発動する前も、判明した時点から裁定を止める。
+  ただし、迂回が判明する前の裁定は許している。0件は、迂回のある
+  全事件で裁定が禁止されることを示さない。解除後には裁定できる。
 
-原告に与える裁許に限って留保する読みでは、第35条で他へ
-給付する4事案が、留保を広く読む検査基準に照らして残る。
-他への給付を含む直接裁定をすべて留保終了まで待たせる読みでは、
-全272事案で検出0件。留保の解除後は第35条・第49条の両経路で
-裁定に進めることを、初期状態からの経路で確かめた。
+終端経路数は順に672,624、638,328、523,648。
+「終端」は本モデルで後続遷移がない状態を指し、受付で止まる場合や、
+証拠が未確定で進めない場合も含む。実際の訴訟の解決件数ではない。
 
 検査範囲と前提
 
-事案の変数は受付条件、証拠、問状を先に置くか、被告の出頭、
-奉行人の迂回があるか、所職改替に要る糺決が済んだか。
-明白な僻事では原告の理非を確定する証拠がない設定とした。
-残りの各受付条件には四つの証拠の設定を割り当てた。
-四つの二値条件を組み合わせ、計272通りを検査した。
-各設定について、モデルが認める全順序を終端まで探索した。
-第45条の所職改替を裁定後としたのはモデルの順序上の仮定。
-原文は糺決を経ずに処分することを問題にしている。
+受付条件は通常、本所の挙状なし、濫訴、明白な僻事の四つ。
+最初の三つは証拠未確定一通り、原告に理あり／理なしと双方証文の
+明白さの組み合わせ四通り、計五通りを与える。明白な僻事には、
+証拠未確定だけを割り当てる。証文が明白なのに理非が未確定という
+矛盾した入力は除く。問状を先に置くか、被告の出頭、奉行人の迂回、
+競望、糺決、別規則による改易根拠の六つの二値条件を組み合わせ、
+(3×5＋1)×2^6＝1,024事案とした。
 
-第51条の問状と第35条の召文は別の文書として扱った。
-問状を召文の前提とする経路は比較用の仮定。問状を経ない
-召文の経路でも留保中の裁定は再現する。第49条については
-原告に理があることが双方の証文から明らかな場合を代表にした。
-受付で止める事案では、それぞれの適用要件がすでに満たされた
-ものとした。第29条の留保解除は外部判断として扱った。
+第51条の問状と第35条の召文は別の文書で、接続の有無を比較する。
+第35条の原告に理がない枝は、他への給付が対象となる事案に限定。
+受付で止める場合は当該条文の適用要件が既に満たされたものとする。
+第6・7条にいうすべての要件や、全51条の手続を実装したものではない。
 
-検出対象は上記の手続内での留保中の裁定など。別訴、先例、
-追加法、科刑の併合、留保が長引く場合の手続の停滞は範囲外。
-0件は、直接裁定を待たせる読みと、この状態モデルでの結果。
-前回の全51条モデルの4候補は、今回の経路探索とは別の検査結果。
+探索は深さ14で、全事案・全解釈の探索前線が空になることを確認した。
+同じ深さの同じ状態をまとめ、到達経路数を重みとして加算している。
+遷移と検査は入力・状態・イベントにだけ依存するので、到達可能性を
+保持しながら、終端経路数は全順序を数える。表示する反例は各状態への
+代表経路であり、すべての反例経路の一覧ではない。深さ順に探索するため、
+表示する最初の反例は最短長を持つ。代表事案で、集約しない探索と
+終端経路数、検出する違反とイベントの組、最短反例長の一致も確認した。
+
+回帰検査では、競望拒否後の本案裁定、原告無理の第49条裁定、
+判明後・未発動の裁定禁止、判明前の裁定、解除後の第35・49条裁定、
+糺決または改易根拠を欠く場合の所職改替禁止を確認している。
+別訴、先例、追加法、科刑の併合、長期の手続停滞は対象外。
+原文照合版の候補数と本報告の事案数は別の検査結果である。
 
 底本　『群書類従』第十五輯所収本の翻刻
 https://ja.wikisource.org/wiki/御成敗式目
 
 Leanの実行結果
 
-第29条の留保と直接裁定を独立に適用
-事案 272 / 衝突候補のある事案 16 / 終端経路 36896
-  ShikimokuProcedure.Finding.stayAgainstAward35: 8事案
-  ShikimokuProcedure.Finding.stayAgainstAwardAnother35: 4事案
-  ShikimokuProcedure.Finding.stayAgainstDecision49: 8事案
-問状を経る例の第35条の経路 some { finding := ShikimokuProcedure.Finding.stayAgainstAward35,
-  events := [ShikimokuProcedure.Event.admit,
-             ShikimokuProcedure.Event.issueInquiry51,
-             ShikimokuProcedure.Event.sendSummons35,
-             ShikimokuProcedure.Event.sendSummons35,
-             ShikimokuProcedure.Event.sendSummons35,
-             ShikimokuProcedure.Event.recordDefault35,
-             ShikimokuProcedure.Event.examineMerits,
-             ShikimokuProcedure.Event.stayAward29,
-             ShikimokuProcedure.Event.awardPlaintiff35] }
-同じ事案の第49条の経路 some { finding := ShikimokuProcedure.Finding.stayAgainstDecision49,
+第29条の制限と直接裁定を独立に適用（広義の留保を基準に照合）
+事案 1024 / 衝突候補のある事案 96 / 終端経路 672624
+  ShikimokuProcedure.Finding.decisionBeforeStayActivation29: 96事案
+  ShikimokuProcedure.Finding.decisionDuringStay29: 96事案
+  ShikimokuProcedure.Event.awardPlaintiff35: 32事案
+  ShikimokuProcedure.Event.awardAnother35: 32事案
+  ShikimokuProcedure.Event.decidePlaintiffFromDocuments49: 32事案
+  ShikimokuProcedure.Event.denyPlaintiffFromDocuments49: 32事案
+  ShikimokuProcedure.Event.decidePlaintiffAfterAppearance: 0事案
+  ShikimokuProcedure.Event.denyPlaintiffAfterAppearance: 0事案
+判明後・留保未発動の経路 some { finding := ShikimokuProcedure.Finding.decisionBeforeStayActivation29,
   events := [ShikimokuProcedure.Event.admit,
              ShikimokuProcedure.Event.examineMerits,
+             ShikimokuProcedure.Event.discoverBypass29,
+             ShikimokuProcedure.Event.decidePlaintiffFromDocuments49] }
+留保中の経路 some { finding := ShikimokuProcedure.Finding.decisionDuringStay29,
+  events := [ShikimokuProcedure.Event.admit,
+             ShikimokuProcedure.Event.examineMerits,
+             ShikimokuProcedure.Event.discoverBypass29,
              ShikimokuProcedure.Event.stayAward29,
-             ShikimokuProcedure.Event.decideFromDocuments49] }
-第29条の留保を原告への裁許に限る（広義の留保を基準に照合）
-事案 272 / 衝突候補のある事案 4 / 終端経路 32836
-  ShikimokuProcedure.Finding.stayAgainstAward35: 0事案
-  ShikimokuProcedure.Finding.stayAgainstAwardAnother35: 4事案
-  ShikimokuProcedure.Finding.stayAgainstDecision49: 0事案
-第29条の留保中は直接裁定も見合わせる
-事案 272 / 衝突候補のある事案 0 / 終端経路 32272
-  ShikimokuProcedure.Finding.stayAgainstAward35: 0事案
-  ShikimokuProcedure.Finding.stayAgainstAwardAnother35: 0事案
-  ShikimokuProcedure.Finding.stayAgainstDecision49: 0事案
+             ShikimokuProcedure.Event.decidePlaintiffFromDocuments49] }
+第29条の制限を原告への裁許に限る（広義の留保を基準に照合）
+事案 1024 / 衝突候補のある事案 64 / 終端経路 638328
+  ShikimokuProcedure.Finding.decisionBeforeStayActivation29: 64事案
+  ShikimokuProcedure.Finding.decisionDuringStay29: 64事案
+  ShikimokuProcedure.Event.awardPlaintiff35: 0事案
+  ShikimokuProcedure.Event.awardAnother35: 32事案
+  ShikimokuProcedure.Event.decidePlaintiffFromDocuments49: 0事案
+  ShikimokuProcedure.Event.denyPlaintiffFromDocuments49: 32事案
+  ShikimokuProcedure.Event.decidePlaintiffAfterAppearance: 0事案
+  ShikimokuProcedure.Event.denyPlaintiffAfterAppearance: 32事案
+判明後は直接裁定を含む全裁定を留保解除まで見合わせる
+事案 1024 / 衝突候補のある事案 0 / 終端経路 523648
+  ShikimokuProcedure.Finding.decisionBeforeStayActivation29: 0事案
+  ShikimokuProcedure.Finding.decisionDuringStay29: 0事案
+  ShikimokuProcedure.Event.awardPlaintiff35: 0事案
+  ShikimokuProcedure.Event.awardAnother35: 0事案
+  ShikimokuProcedure.Event.decidePlaintiffFromDocuments49: 0事案
+  ShikimokuProcedure.Event.denyPlaintiffFromDocuments49: 0事案
+  ShikimokuProcedure.Event.decidePlaintiffAfterAppearance: 0事案
+  ShikimokuProcedure.Event.denyPlaintiffAfterAppearance: 0事案
