@@ -4,26 +4,30 @@
 
 ## 実行方法
 
-1. Leanのバージョン管理ツールであるElanを導入します。Windowsでは公式ガイドのVS CodeとLean 4拡張機能から設定できます。コマンドラインからの導入方法も公式ガイドにあります。[Leanのインストール](https://lean-lang.org/install/) · [手動インストール](https://lean-lang.org/install/manual/)
-2. 展開またはクローンしたフォルダーを開き、ターミナルで `lean-toolchain` があるディレクトリに移動します。Elanはこのファイルを読み、Lean 4.19.0を選択します。初回はツールチェーンの取得にネット接続が必要です。[Elanのツールチェーン選択](https://lean-lang.org/doc/reference/latest/Build-Tools-and-Distribution/Managing-Toolchains-with-Elan/)
-3. 以下を実行します。Lean標準の機能だけで動作します。
+Leanのバージョン管理ツールであるElanを導入し、ターミナルで以下を実行します。`lean-toolchain` がLean 4.19.0を指定します。初回はツールチェーンの取得にインターネット接続が必要です。モデルはLean標準の機能だけで動作します。[Leanのインストール](https://lean-lang.org/install/) · [Elanのツールチェーン選択](https://lean-lang.org/doc/reference/latest/Build-Tools-and-Distribution/Managing-Toolchains-with-Elan/)
 
-```text
+```bash
+git clone https://github.com/adachi6k/shikimoku-lean.git
+cd shikimoku-lean
 lean --version
 lean ShikimokuOriginalAudit.lean
 lean ShikimokuProcedureAudit.lean
 ```
 
-各ファイルは単独で実行できます。末尾の `#eval` が結果を表示し、`#guard` のあるモデルでは期待した検証結果が得られないとLeanがエラーを返します。
+GitHubの **Code → Download ZIP** から取得した場合は、展開したフォルダーのうち `lean-toolchain` がある場所で、`lean --version` 以降を実行します。各モデルは `#eval` で結果を表示し、`#guard` で検証結果が期待値と一致することを確認します。実行結果の詳細は下の報告書にあります。
 
 ## ファイルと結果
 
 | Leanファイル | 対象と結果 | 報告書 |
 |---|---|---|
-| [ShikimokuOriginalAudit.lean](ShikimokuOriginalAudit.lean) | 原文翻刻と照合した162規則の全13,041ペア。候補4件。そのうち1件は慣行と禁制の重なり。 | [原文照合版の報告](reports/ShikimokuOriginalAuditReport.txt) |
-| [ShikimokuProcedureAudit.lean](ShikimokuProcedureAudit.lean) | 8条の手続について272通りの事案を探索。第29条の留保の適用範囲によって、候補のある事案は16件、4件、0件。 | [手続検証の報告](reports/ShikimokuProcedureAuditReport.txt) |
+| [ShikimokuOriginalAudit.lean](ShikimokuOriginalAudit.lean) | 全51条を原文翻刻と照合し、162規則の13,041組を比較。候補4件のうち1件は慣行と禁制の重なり。 | [原文照合版の報告](reports/ShikimokuOriginalAuditReport.txt) |
+| [ShikimokuProcedureAudit.lean](ShikimokuProcedureAudit.lean) | 8条の手続について272通りの事案を探索。第29条の留保を適用する範囲に応じ、留保中に裁定へ進める事案は16件、4件、0件。 | [手続検証の報告](reports/ShikimokuProcedureAuditReport.txt) |
 
-全ペアの件数は、各モデルに登録した規則から異なる2規則を選ぶ組み合わせの数です。同じ法的効果に当たる規則は人手で対応づけています。手続モデルでは問状と召文の接続や裁許の留保範囲を仮定し、仮定ごとに到達可能な経路を調べています。各報告書に、候補が成立する条件と解釈上の留保を記載しています。
+## 検証範囲
+
+13,041組は、登録した162規則から異なる2規則を選ぶ全組み合わせです。同じ法的効果を比較するための対応づけは手作業で行っています。手続検証では、問状と召文の接続や裁許の留保範囲を仮定し、各設定で到達できる経路を調べています。
+
+検証結果は、採用した解釈とモデルの条件の下で、どの規則が重なるかを示します。鎌倉幕府での実際の裁定を判断するには、裁判記録や追加法、当時の通達による裏づけが必要です。
 
 ## 参照資料
 
@@ -33,14 +37,11 @@ lean ShikimokuProcedureAudit.lean
 - 松園潤一朗「中世における年紀法の機能と変容」。第8条の適用と知行の経緯。[一橋大学リポジトリ](https://hit-u.repo.nii.ac.jp/record/2041528/files/hogaku0180100690.pdf)
 - 佐藤雄基による鎌倉幕府の裁判手続の解説。第35条の召文と不参決、第51条の問状の運用。[裁判所ウェブサイト](https://www.courts.go.jp/saikosai/vc-files/saikosai/shihoukensyujyo/ronsyuu2024-5.pdf)
 
-## GitHubへの登録
+## 指摘・再利用
 
-GitHubで空のリポジトリを作成します。README、ライセンス、.gitignore の初期化は空欄にします。展開先の `shikimoku-lean` で次を実行し、`YOUR-ACCOUNT/shikimoku-lean` を作成したリポジトリのパスに置き換えます。認証の方法はGitHubの公式手順を参照してください。[既存のローカルコードをGitHubに追加する](https://docs.github.com/en/migrations/importing-source-code/using-the-command-line-to-import-source-code/adding-locally-hosted-code-to-github)
+史料の読みやモデルへの指摘、実行時の問題はGitHub Issuesに投稿できます。該当する条文やファイル、実行したコマンドを添えると再現しやすくなります。[Issues](https://github.com/adachi6k/shikimoku-lean/issues)
 
-```bash
-git init -b main
-git add .
-git commit -m "Add Goseibai Shikimoku Lean models"
-git remote add origin https://github.com/YOUR-ACCOUNT/shikimoku-lean.git
-git push -u origin main
-```
+- Leanソースコード（`*.lean`）は [MIT License](LICENSE) を適用します。
+- このREADMEと `reports/` 内の検証報告書は、Koji Adachiが許諾できる範囲で [CC BY 4.0](LICENSE-CC-BY-4.0) を適用します。再利用時は著作者名とライセンスを示し、改変した場合はその旨を明記してください。
+
+リンク先の現代語訳・論文などには、それぞれの権利条件が適用されます。
