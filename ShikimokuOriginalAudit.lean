@@ -464,7 +464,8 @@ def effectsAt (rules : List NumberedClause) (article : Nat) (mode : Mode)
       ["悪口を吐いた当事者を流罪"])
 
 -- 第41条: 年紀成立時は元の男女分岐と比較用効果の両方が止まる。
--- 年紀が成立しない時と、帰属変更を伴わない時も確認する。
+-- 年紀が成立しない時も確認する。派生効果の二つの追加条件は、
+-- もう一方を満たしたまま一つずつ外し、それぞれが必要なことを検査する。
 def reading41 : Reading := readings[2]
 def interpreted41 : List NumberedClause := withReading sourceRules reading41
 #guard ["奴婢の子が男子", "奴婢の子が女子"].all (fun sex =>
@@ -475,8 +476,12 @@ def interpreted41 : List NumberedClause := withReading sourceRules reading41
   (effectsAt (comparisonRules interpreted41) 41 .require expired).isEmpty &&
   (effectsAt interpreted41 41 .require facts).length == 1 &&
   (effectsAt (comparisonRules interpreted41) 41 .require facts).length == 2 &&
-  !(effectsAt (comparisonRules interpreted41) 41 .require [sex]).contains
-    "当該の子の現帰属を裁定で変更")
+  !(effectsAt (comparisonRules interpreted41) 41 .require
+    [sex, "対象は第41条の年紀に服する子"]).contains
+      "当該の子の現帰属を裁定で変更" &&
+  !(effectsAt (comparisonRules interpreted41) 41 .require
+    [sex, "父母への振分けで定まる帰属先が現帰属先と異なる"]).contains
+      "当該の子の現帰属を裁定で変更")
 
 -- 第43条: 物・収益の返還だけから知行者変更を推論しない。
 #guard !(effectsAt baseline 43 .require
